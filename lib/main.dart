@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:payroll_app/provider/attendance_provider.dart';
 import 'package:payroll_app/provider/employee_provider.dart';
 import 'package:payroll_app/screens/splash_screen.dart';
 import 'package:provider/provider.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => EmployeeProvider(context: context),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => AttendanceProvider(context: context),
+          child: const MyApp(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => EmployeeProvider(context: context),
+        ),
+      ],
       child: const MyApp(),
     ),
   );

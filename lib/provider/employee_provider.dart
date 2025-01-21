@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:payroll_app/model/Employee.dart';
+import 'dart:html' as html;
 
 class EmployeeProvider extends ChangeNotifier {
   final Dio _dio = Dio();
@@ -82,6 +83,31 @@ class EmployeeProvider extends ChangeNotifier {
         print('Error details: ${e.response?.data}');
       }
       print('Error updating Employee: ' + e.toString());
+    }
+  }
+
+  Future<void> downloadReceipt(int employeeId) async {
+    try {
+      final Response response = await _dio.get(
+        '$_baseUrl/reports/salary/$employeeId',
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      if (response.statusCode == 200) {
+        final blob = html.Blob([response.data], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..target = 'blank'
+          ..download = 'receipt_$employeeId.pdf'
+          ..click();
+        html.Url.revokeObjectUrl(url); // Clean up the URL after download
+        print('Receipt downloaded successfully');
+      } else {
+        print(
+            'Failed to download receipt, status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error downloading receipt: $e');
     }
   }
 }

@@ -43,8 +43,7 @@ class _EmployeeDashBoardState extends State<EmployeeDashBoard> {
 
   void deleteEmployee(int employeeId) {
     final provider = Provider.of<EmployeeProvider>(context, listen: false);
-    provider.deleteEmployee(
-        employeeId); // Add a delete functionality in your provider
+    provider.deleteEmployee(employeeId);
   }
 
   @override
@@ -175,12 +174,45 @@ class _EmployeeDashBoardState extends State<EmployeeDashBoard> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
+                  onPressed: () {
+                    Provider.of<EmployeeProvider>(context, listen: false)
+                        .downloadReceipt(employee.employeeId!);
+                  },
+                  icon: const Icon(Icons.receipt),
+                ),
+                IconButton(
                   icon: const Icon(Icons.edit, color: Colors.blue),
                   onPressed: () => navigateToUpdateEmployeeScreen(employee),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => deleteEmployee(employee.employeeId!),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Confirm Delete'),
+                          content: const Text(
+                              'Are you sure you want to delete this employee?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context); // Close dialog
+                              },
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                deleteEmployee(employee.employeeId!);
+                                Navigator.pop(context); // Close dialog
+                              },
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
                 ),
               ],
             ),

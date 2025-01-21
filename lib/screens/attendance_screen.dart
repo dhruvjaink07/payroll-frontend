@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:payroll_app/model/Employee.dart';
+import 'package:payroll_app/model/Attendance.dart';
+import 'package:payroll_app/provider/attendance_provider.dart';
+import 'package:provider/provider.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final List<Employee> employees;
@@ -11,32 +14,51 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  List<Map<String, dynamic>> attendanceData = [];
+  late List<Attendance> attendanceData;
 
   @override
   void initState() {
     super.initState();
-    attendanceData = widget.employees
-        .map((employee) => {
-              'employeeId': employee.employeeId,
-              'checkInTime': const TimeOfDay(hour: 9, minute: 0),
-              'checkOutTime': null,
-              'status': 'Present',
-              'remarks': '',
-            })
-        .toList();
+    initializeAttendanceData();
   }
 
-  void updateAttendance(int index, String field, dynamic value) {
+  void initializeAttendanceData() {
+    attendanceData = widget.employees.map((employee) {
+      return Attendance(
+        employeeId: employee.employeeId!,
+        date: DateTime.now(),
+        checkInTime: "09:00:00", // Default check-in time
+        checkOutTime: "", // Default empty check-out time
+        totalHoursWorked: 0.0,
+        status: "Present",
+        remarks: "Good",
+      );
+    }).toList();
+  }
+
+  void updateAttendanceField(int index, String field, dynamic value) {
     setState(() {
-      attendanceData[index][field] = value;
+      final attendance = attendanceData[index];
+      switch (field) {
+        case 'checkInTime':
+          attendanceData[index] = attendance.copyWith(checkInTime: value);
+          break;
+        case 'checkOutTime':
+          attendanceData[index] = attendance.copyWith(checkOutTime: value);
+          break;
+        case 'status':
+          attendanceData[index] = attendance.copyWith(status: value);
+          break;
+        case 'remarks':
+          attendanceData[index] = attendance.copyWith(remarks: value);
+          break;
+      }
     });
   }
 
-  void submitAllAttendance() {
-    // Check if all fields are filled
-    if (attendanceData.any((data) =>
-        data['checkInTime'] == null || data['checkOutTime'] == null)) {
+  void submitAttendance() {
+    if (attendanceData
+        .any((data) => data.checkInTime.isEmpty || data.checkOutTime.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please complete all entries before submitting.'),
@@ -45,25 +67,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       return;
     }
 
-    // Convert attendance data to a format suitable for database insertion
-    final attendanceList = attendanceData.map((data) {
-      return {
-        'employeeId': data['employeeId'],
-        'date': DateTime.now().toIso8601String(),
-        'checkInTime': (data['checkInTime'] as TimeOfDay).format(context),
-        'checkOutTime': (data['checkOutTime'] as TimeOfDay).format(context),
-        'status': data['status'],
-        'remarks': data['remarks'],
-      };
-    }).toList();
-
-    // Send attendanceList to the backend API
-    // Example: http.post('your_api_endpoint', body: json.encode(attendanceList));
-
-    print(
-        'Attendance List: $attendanceList'); // Debugging: Check the generated data
+    final attendanceList = attendanceData.map((data) => data.toJson()).toList();
+    Provider.of<AttendanceProvider>(context, listen: false)
+        .addAttendanceData(attendanceData);
+    print('Submitting Attendance: $attendanceList');
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All attendance recorded successfully!')),
+      const SnackBar(content: Text('Attendance recorded successfully!')),
     );
   }
 
@@ -77,100 +86,128 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         itemCount: widget.employees.length,
         itemBuilder: (context, index) {
           final employee = widget.employees[index];
-          final data = attendanceData[index];
-          return Card(
-            margin: const EdgeInsets.all(8.0),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${employee.firstName} ${employee.lastName}',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Designation: ${employee.designation}'),
-                  Text('Department: ${employee.department}'),
-                  const Divider(height: 16, thickness: 1),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () async {
-                            final picked = await showTimePicker(
-                              context: context,
-                              initialTime: const TimeOfDay(hour: 9, minute: 0),
-                            );
-                            if (picked != null) {
-                              updateAttendance(index, 'checkInTime', picked);
-                            }
-                          },
-                          child: buildTimeField(
-                            label: 'Check-in',
-                            time: data['checkInTime'],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () async {
-                            final picked = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
-                            );
-                            if (picked != null) {
-                              updateAttendance(index, 'checkOutTime', picked);
-                            }
-                          },
-                          child: buildTimeField(
-                            label: 'Check-out',
-                            time: data['checkOutTime'],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: data['status'],
-                    onChanged: (value) {
-                      if (value != null)
-                        updateAttendance(index, 'status', value);
-                    },
-                    items: ['Present', 'Absent', 'On Leave']
-                        .map((status) => DropdownMenuItem(
-                              value: status,
-                              child: Text(status),
-                            ))
-                        .toList(),
-                    decoration: const InputDecoration(labelText: 'Status'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    onChanged: (value) =>
-                        updateAttendance(index, 'remarks', value),
-                    decoration: const InputDecoration(
-                      labelText: 'Remarks',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          final attendance = attendanceData[index];
+
+          return AttendanceCard(
+            employee: employee,
+            attendance: attendance,
+            onFieldUpdated: (field, value) =>
+                updateAttendanceField(index, field, value),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: submitAllAttendance,
+        onPressed: submitAttendance,
         child: const Icon(Icons.check),
       ),
     );
   }
+}
 
-  Widget buildTimeField({required String label, TimeOfDay? time}) {
+class AttendanceCard extends StatelessWidget {
+  final Employee employee;
+  final Attendance attendance;
+  final Function(String field, dynamic value) onFieldUpdated;
+
+  const AttendanceCard({
+    required this.employee,
+    required this.attendance,
+    required this.onFieldUpdated,
+  });
+
+  Future<void> _pickTime(BuildContext context, String field) async {
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+    );
+
+    if (pickedTime != null) {
+      final formattedTime = pickedTime.format(context);
+      onFieldUpdated(field, formattedTime);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.all(8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${employee.firstName} ${employee.lastName}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text('Designation: ${employee.designation}'),
+            Text('Department: ${employee.department}'),
+            const Divider(height: 16, thickness: 1),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _pickTime(context, 'checkInTime'),
+                    child: TimeDisplayField(
+                      label: 'Check-in',
+                      time: attendance.checkInTime.isNotEmpty
+                          ? attendance.checkInTime
+                          : 'Not set',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _pickTime(context, 'checkOutTime'),
+                    child: TimeDisplayField(
+                      label: 'Check-out',
+                      time: attendance.checkOutTime.isNotEmpty
+                          ? attendance.checkOutTime
+                          : 'Not set',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: attendance.status,
+              onChanged: (value) {
+                if (value != null) onFieldUpdated('status', value);
+              },
+              items: ['Present', 'Absent', 'On Leave']
+                  .map((status) => DropdownMenuItem(
+                        value: status,
+                        child: Text(status),
+                      ))
+                  .toList(),
+              decoration: const InputDecoration(labelText: 'Status'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              onChanged: (value) => onFieldUpdated('remarks', value),
+              decoration: const InputDecoration(
+                labelText: 'Remarks',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TimeDisplayField extends StatelessWidget {
+  final String label;
+  final String time;
+
+  const TimeDisplayField({required this.label, required this.time});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
@@ -181,10 +218,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          Text(
-            time != null ? time.format(context) : 'Not set',
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(time, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
