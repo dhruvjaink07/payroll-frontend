@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:payroll_app/model/Employee.dart';
+import 'package:payroll_app/provider/employee_provider.dart';
+import 'package:provider/provider.dart';
 
 class AddEmployeeScreen extends StatefulWidget {
   @override
@@ -143,13 +146,17 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    // Process data
-                    print('First Name: ${_firstNameController.text}');
-                    print('Last Name: ${_lastNameController.text}');
-                    print('Designation: ${_designationController.text}');
-                    print('Department: $_selectedDepartment');
-                    print('Salary: ${_salaryController.text}');
-                    print('Date of Joining: ${_dateOfJoiningController.text}');
+                    Employee newEmployee = Employee(
+                        employeeId: 0,
+                        firstName: _firstNameController.text,
+                        lastName: _lastNameController.text,
+                        designation: _designationController.text,
+                        department: _selectedDepartment!,
+                        salary: double.parse(_salaryController.text),
+                        dateOfJoining: _dateOfJoiningController.text);
+                    Provider.of<EmployeeProvider>(context, listen: false)
+                        .addEmployee(newEmployee);
+
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

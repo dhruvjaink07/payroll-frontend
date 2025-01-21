@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:payroll_app/provider/employee_provider.dart';
 import 'package:payroll_app/screens/splash_screen.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => EmployeeProvider(context: context),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

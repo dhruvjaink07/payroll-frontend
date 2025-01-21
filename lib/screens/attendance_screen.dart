@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:payroll_app/model/Employee.dart';
 
 class AttendanceScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> employees;
+  final List<Employee> employees;
 
   AttendanceScreen({required this.employees});
 
@@ -17,7 +18,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     super.initState();
     attendanceData = widget.employees
         .map((employee) => {
-              'employeeId': employee['employeeId'],
+              'employeeId': employee.employeeId,
               'checkInTime': const TimeOfDay(hour: 9, minute: 0),
               'checkOutTime': null,
               'status': 'Present',
@@ -85,13 +86,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${employee['firstName']} ${employee['lastName']}',
+                    '${employee.firstName} ${employee.lastName}',
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Text('Designation: ${employee['designation']}'),
-                  Text('Department: ${employee['department']}'),
+                  Text('Designation: ${employee.designation}'),
+                  Text('Department: ${employee.department}'),
                   const Divider(height: 16, thickness: 1),
                   Row(
                     children: [
